@@ -11,22 +11,32 @@ int main(int argc, char** argv)
 	int* p_port = parser.getArg("port", &p_port);
 
 	Client client;
+	client.processor.addUnit("start", [](
+		const void* const request, 
+		const size_t requestSize, 
+		const void** response, 
+		size_t* responseSize) -> std::string {
+			char* data[requestSize + 1];
+			memcpy(data, request, requestSize);
+			((char*)data)[requestSize] = 0;
+			std::cout << "Server response: " << (char*)data << std::endl;
+			return "exit";
+		});
+	
+	client.processor.setStartState("start");
+	client.processor.setExitState("exit");
+	client.processor.setErrorState("error");
+	client.processor.setupStartState();
+	
 	int connection;
 	if ((connection = client.connect(*p_addr, *p_port, AF_INET)) == -1)
 	{
 		return -1;
 	}
-	std::string msg = "Hello, server!";
-	client.send(connection, (void*)msg.c_str(), msg.length());
-	char data[256];
-	client.recv(connection, data, 256);
-	std::cout << "Server response: " << data << std::endl;
 	
-	std::string msg2 = "Hello, client!";
-	client.send(connection, (void*)msg2.c_str(), msg2.length());
-	char data2[256];
-	client.recv(connection, data2, 256);
-	std::cout << "Server response: " << data2 << std::endl;
-	
+	const char* msg = "hello\r\n";
+	client.pushSendBuffer(msg, strlen(msg));
+	do {} while (client.step(POLLOUT) != POLLIN);
+	client.step(POLLIN);
 	return 0;
 }

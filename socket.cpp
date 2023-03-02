@@ -1,11 +1,16 @@
 #include "socket.h"
 
+static void throwErrno(const std::string& msg)
+{
+	throw std::runtime_error(msg + ": " + strerror(errno));
+}
+
 Socket::Socket(const std::string& addr, int port, int faml, int type)
 {
 	// Create socket
 	if ((this->descriptor = socket(faml, type, 0)) == 0)
 	{
-		throw std::runtime_error("Socket was not created");
+		throwErrno("In ::Socket: Socket was not created");
 	}
 	
 	// Create address
@@ -19,7 +24,7 @@ Socket::Socket(const std::string& addr, int port, int faml, int type)
 		ip_v4->sin_port = htons(port);
 		if ((inet_pton(faml, addr.c_str(), &(ip_v4->sin_addr))) != 1)
 		{
-			throw std::runtime_error("Invalid ip_v4 address");
+			throwErrno("In ::Socket: Invalid ip_v4 address");
 		}
 		break;
 	case AF_INET6:
@@ -28,11 +33,11 @@ Socket::Socket(const std::string& addr, int port, int faml, int type)
 		ip_v6->sin6_port = htons(port);
 		if ((inet_pton(faml, addr.c_str(), &(ip_v6->sin6_addr))) != 1)
 		{
-			throw std::runtime_error("Invalid ip_v6 address");
+			throwErrno("In ::Socket: Invalid ip_v6 address");
 		}
 		break;
 	default:
-		throw std::runtime_error("Incorrect address family");
+		throw std::runtime_error("In ::Socket: Incorrect family address");
 	}
 	this->addrLength = (socklen_t)sizeof(this->addr);
 }
@@ -43,7 +48,7 @@ Socket::Socket(int desc)
 	this->addrLength = (socklen_t)sizeof(this->addr);
 	if (getpeername(desc, &(this->addr), &(this->addrLength)) != 0)
 	{
-		throw std::runtime_error("The getsockname function was exit with error");
+		throwErrno("In ::Socket: The getsockname function was exit with error");
 	}
 }
 
@@ -57,7 +62,7 @@ void Socket::bind() const
 {
 	if (_bind(this->descriptor, &(this->addr), this->addrLength) != 0)
 	{
-		throw std::runtime_error("Socket was not binded");
+		throwErrno("In Socket::bind");
 	}
 }
 
@@ -65,7 +70,7 @@ void Socket::connect() const
 {
 	if (_connect(this->descriptor, &(this->addr), addrLength) != 0)
 	{
-		throw std::runtime_error("Connection failed");
+		throwErrno("In Socket::connect");
 	}
 }
 
@@ -78,7 +83,7 @@ void Socket::listen(int queue) const
 {
 	if (_listen(this->descriptor, queue) < 0)
 	{
-		throw std::runtime_error("Listening failed");
+		throwErrno("In Socket::listen");
 	}
 }
 
@@ -87,7 +92,7 @@ int Socket::accept()
 	int acceptedDesc;
 	if ((acceptedDesc = _accept(this->descriptor, &(this->addr), &(this->addrLength))) == 0)
 	{
-		throw std::runtime_error("Accept failed");
+		throwErrno("In Socket::accept");
 	}
 	// Set nonblocked socked
 	int flags = fcntl(acceptedDesc, F_GETFL);
@@ -95,12 +100,12 @@ int Socket::accept()
 	return acceptedDesc;
 }
 
-size_t Socket::send(void* data, size_t size, int flags) const
+size_t Socket::send(const void* data, size_t size, int flags) const
 {
 	ssize_t sended;
-	if ((sended = _send(this->descriptor, data, size, flags)) <= 0)
+	if ((sended = _send(this->descriptor, data, size, flags)) == -1)
 	{
-		throw std::runtime_error("Send failed");
+		throwErrno("In Socket::send");
 	}
 	return (size_t)sended;
 }
@@ -108,9 +113,9 @@ size_t Socket::send(void* data, size_t size, int flags) const
 size_t Socket::recv(void* data, size_t size, int flags) const
 {
 	ssize_t received;
-	if ((received = _recv(this->descriptor, data, size, flags)) <= 0)
+	if ((received = _recv(this->descriptor, data, size, flags)) == -1)
 	{
-		throw std::runtime_error("Receive failed");
+		throwErrno("In Socket::recv");
 	}
 	return (size_t)received;
 }
@@ -119,7 +124,7 @@ void Socket::setup(int optname, void *optval, socklen_t optlen) const
 {
 	if (setsockopt(this->descriptor, SOL_SOCKET, optname, optval, optlen) != 0)
 	{
-		throw std::runtime_error("The setsockopt function was exit with error");
+		throwErrno("The setsockopt function was exit with error");
 	}
 }
 
@@ -144,7 +149,7 @@ void Socket::printAddr(std::string& dest) const
 		dest += inet_ntop(AF_INET, &(ip_v6->sin6_addr), buf, 64);
 		break;
 	default:
-		throw std::runtime_error("Incorrect address family");
+		throw std::runtime_error("In Socket::printAddr: Incorrect family address");
 	}
 }
 
@@ -164,7 +169,7 @@ void Socket::printPort(std::string& dest) const
 		port = ntohs(ip_v6->sin6_port);
 		break;
 	default:
-		throw std::runtime_error("Incorrect address family");
+		throw std::runtime_error("In Socket::printPort: Incorrect family address");
 	}
 	std::stringstream sstream;
 	sstream << port;

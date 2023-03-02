@@ -49,7 +49,7 @@ public:
     void disconnect() const;
     void listen(int queue = 32) const;
     int accept();
-    size_t send(void* data, size_t size, int flags = 0) const;
+    size_t send(const void* data, size_t size, int flags = 0) const;
     size_t recv(void* data, size_t size, int flags = 0) const;
     void setup(int optname, void *optval, socklen_t optlen) const;
 

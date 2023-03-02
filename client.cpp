@@ -5,54 +5,48 @@ Client::Client()
 
 Client::~Client()
 {
-	for (auto pair: this->connections)
-	{
-		delete pair.second;
-	}
+	this->disconnect();
 }
 
-int Client::connect(const std::string& addr, int port, int faml, int type)
+int Client::connect(const std::string& addr, int port, int faml, int type) noexcept
 {
 	try
 	{
-		Socket* p_sock = new Socket(addr, port, faml, type);
-		p_sock->connect();
-		this->connections.insert(std::pair<int, Socket*>(p_sock->desc(), p_sock));
-		return p_sock->desc();
+		this->session = new Session(addr, port, faml, type, this->processor);
+		return this->session->desc();
 	}
 	catch (const std::runtime_error& ex)
 	{
-		std::cerr << "Runtime error: " << ex.what() << std::endl;
+		std::cerr << "In Client::connect: " << ex.what() << std::endl;
 	}
 	return -1;
 }
 
-void Client::disconnect(int connection)
+void Client::disconnect() noexcept
 {
-	this->connections.erase(connection);
+	if (this->session != nullptr)
+	{
+		delete this->session;
+	}
+	this->session = nullptr;
 }
 
-void Client::send(int connection, void* data, size_t size, int flags)
+short Client::step(short events) noexcept
 {
-	try
+	if (this->session != nullptr)
 	{
-		this->connections[connection]->send(data, size, flags);
-	}
-	catch (const std::runtime_error& ex)
+		return this->session->step(events);
+	} else
 	{
-		std::cerr << "Runtime error: " << ex.what() << std::endl;
+		return 0;
 	}
 }
 
-void Client::recv(int connection, void* data, size_t size, int flags)
+void Client::pushSendBuffer(const void* data, size_t size) noexcept
 {
-	try
+	if (this->session != nullptr)
 	{
-		this->connections[connection]->recv(data, size, flags);
-	}
-	catch (const std::runtime_error& ex)
-	{
-		std::cerr << "Runtime error: " << ex.what() << std::endl;
+		this->session->pushSendBuffer(data, size, 0);
 	}
 }
 

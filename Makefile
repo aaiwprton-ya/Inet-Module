@@ -4,18 +4,24 @@ server_args := --addr=0.0.0.0 --port=8000
 client_args := --addr=127.0.0.1 --port=8000
 libs := lib
 
-inet_module.a: server.o client.o socket.o
+inet_module.a: server.o client.o socket.o session.o processor.o
 	ar rcs $@ $^
 
-server.o: server.cpp server.h | socket.o std_afx.h
-	g++ $(CLIBFLAGS) $(CFLAGS) -c -o $@ $< socket.o
+server.o: server.cpp server.h | socket.o session.o processor.o std_afx.h
+	g++ $(CLIBFLAGS) $(CFLAGS) -c -o $@ $< socket.o session.o processor.o
 
-client.o: client.cpp client.h | socket.o std_afx.h
-	g++ $(CLIBFLAGS) $(CFLAGS) -o $@ $< socket.o
+client.o: client.cpp client.h | socket.o session.o processor.o std_afx.h
+	g++ $(CLIBFLAGS) $(CFLAGS) -o $@ $< socket.o session.o processor.o
 
 socket.o: socket.cpp socket.h | std_afx.h
 	g++ $(CLIBFLAGS) $(CFLAGS) -o $@ $<
-	
+
+session.o: session.cpp session.h | socket.o processor.o std_afx.h
+	g++ $(CLIBFLAGS) $(CFLAGS) -o $@ $< socket.o processor.o
+
+processor.o: processor.cpp processor.h | std_afx.h
+	g++ $(CLIBFLAGS) $(CFLAGS) -o $@ $<
+
 test_server.out: test_server.cpp
 	g++ $(CFLAGS) -o $@ $^ inet_module.a $(libs)/argparser.a
 

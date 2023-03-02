@@ -7,6 +7,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <functional>
 #include <stdio.h>
 #include <string.h>   //strlen
 #include <stdlib.h>
@@ -18,6 +19,7 @@
 #include <netinet/in.h>
 #include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO macros
 #include <fcntl.h>
+#include <signal.h>
 
 #define _GNU_SOURCE         /* See feature_test_macros(7) */
 #include <signal.h>

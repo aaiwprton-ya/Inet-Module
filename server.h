@@ -2,21 +2,22 @@
 #define INET_SERVER_H
 
 #include "std_afx.h"
-#include "socket.h"
+#include "session.h"
+#include "processor.h"
 
 class Server
 {
 private:
-	//fd_set set;
+	Socket socket;
 	std::vector<struct pollfd> v_fds;
-    std::list<Socket*> clients;
-    std::list<Socket*>::iterator iter;
+    std::list<Session*> sessions;
+    std::list<Session*>::iterator iter;
 public:
-    Socket socket;
+	Processor processor;
 public:
     Server(const std::string& addr, int port, int faml, int type = SOCK_STREAM);
     ~Server();
-
+public:
     int start();
 };
 
