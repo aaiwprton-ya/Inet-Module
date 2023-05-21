@@ -13,6 +13,11 @@ int Client::connect(const std::string& addr, int port, int faml, int type) noexc
 	try
 	{
 		this->session = new Session(addr, port, faml, type, this->processor);
+		if (this->startCmd != nullptr)
+		{
+			this->session->pushSendBuffer(this->startCmd, InetUtils::cmdSize(this->startCmd), 0);
+			do {} while (session->step(POLLOUT) != POLLIN);
+		}
 		return this->session->desc();
 	}
 	catch (const std::runtime_error& ex)
@@ -48,5 +53,10 @@ void Client::pushSendBuffer(const void* data, size_t size) noexcept
 	{
 		this->session->pushSendBuffer(data, size, 0);
 	}
+}
+
+void Client::setStartCmd(const char* startCmd)
+{
+	this->startCmd = startCmd;
 }
 

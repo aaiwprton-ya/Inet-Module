@@ -6,20 +6,16 @@ Processor::Processor()
 Processor::~Processor()
 {}
 
-void Processor::addUnit(const std::string& key, RequestResponceLambda procUnit)
+void Processor::addUnit(const std::string& key, UnitType procUnit)
 {
 	this->procUnits[key] = procUnit;
 }
 
-void Processor::operator()(
-	const void* const request, 
-	const size_t requestSize, 
-	const void** response, 
-	size_t* responseSize)
+void Processor::operator()(UnitBridge& bridge)
 {
 	do
 	{
-		this->state = this->procUnits[this->state](request, requestSize, response, responseSize);
+		this->state = this->procUnits[this->state](bridge);
 		if (this->procUnits.count(this->state) == 0)
 		{
 			this->setupExitState();

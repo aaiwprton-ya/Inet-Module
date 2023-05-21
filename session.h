@@ -19,6 +19,9 @@ private:
 	size_t endPack = 0; // the end of checked space to not repeat checking
 	char p_sndBuff[SEND_BUFFER_SIZE];
 	size_t sndHead = 0;
+	void* plannedData = nullptr;
+	uint64_t plannedSize = 0;
+	uint64_t expectedSize = 0;
 public:
 	Session(const std::string& addr, int port, int faml, int type, Processor processor);
 	Session(int fd, Processor processor);

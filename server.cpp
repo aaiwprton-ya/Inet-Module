@@ -63,6 +63,12 @@ int Server::start()
 				Session* session = new Session(fd, this->processor);
 				this->sessions.push_back(session);
 				this->v_fds.push_back(this->v_fds[lastIndex]);
+				if (this->startCmd != nullptr)
+				{
+					this->v_fds[lastIndex] = {fd, POLLOUT, 0};
+					session->pushSendBuffer(this->startCmd, InetUtils::cmdSize(this->startCmd), 0);
+					do {} while (session->step(POLLOUT) != POLLIN);
+				}
 				this->v_fds[lastIndex] = {fd, POLLIN, 0};
 				std::cerr << "New connection: " << session->logSocket() << std::endl;
 			}
@@ -108,3 +114,9 @@ int Server::start()
 	}
 	return 0;
 }
+
+void Server::setStartCmd(const char* startCmd)
+{
+	this->startCmd = startCmd;
+}
+

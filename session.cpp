@@ -16,6 +16,25 @@ Session::~Session()
 short Session::step(short events) noexcept
 {
 	short revents = POLLIN;
+	
+	// sending
+	if ((events & POLLOUT) == POLLOUT)
+	{
+		// response sending
+		this->sendBuffer();
+		if (this->sndHead > 0)
+		{
+			revents = revents | POLLOUT;
+		} else
+		{
+			if (this->processor.isExit())
+			{
+				revents = 0;
+			}
+		}
+	}
+	
+	// receiving
 	if ((events & POLLIN) == POLLIN)
 	{
 		// request receiving
@@ -35,19 +54,20 @@ short Session::step(short events) noexcept
 		}
 		
 		// request processing
-		const void* request = nullptr;
-		size_t requestSize = 0;
-		const void* response = nullptr;
-		size_t responseSize = 0;
-		if (this->getRcvPack(&request, &requestSize))
+		UnitBridge bridge;
+		bridge.plannedData = &(this->plannedData);
+		bridge.plannedSize = &(this->plannedSize);
+		bridge.expectedSize = &(this->expectedSize);
+		
+		if (this->getRcvPack(&(bridge.request), &(bridge.requestSize)))
 		{
-			this->processor((const void*)request, (size_t)requestSize, &response, &responseSize);
-			this->eraseRcvPack(requestSize);
-			if (responseSize > 0)
+			this->processor(bridge);
+			this->eraseRcvPack(bridge.requestSize);
+			if (bridge.responseSize > 0)
 			{
 				try
 				{
-					this->pushSendBuffer(response, responseSize, 0);
+					this->pushSendBuffer(bridge.response, bridge.responseSize, 0);
 				} catch (const std::runtime_error& ex)
 				{
 					std::cerr << "In Session::step: " << ex.what() << std::endl;
@@ -60,24 +80,6 @@ short Session::step(short events) noexcept
 				{
 					revents = 0;
 				}
-			}
-		}
-	}
-	
-	// TODO process error and exit cases
-	
-	if ((events & POLLOUT) == POLLOUT)
-	{
-		// responce sending
-		this->sendBuffer();
-		if (this->sndHead > 0)
-		{
-			revents = revents | POLLOUT;
-		} else
-		{
-			if (this->processor.isExit())
-			{
-				revents = 0;
 			}
 		}
 	}
@@ -109,13 +111,23 @@ size_t Session::recv(int flags)
 ssize_t Session::checkRecv() noexcept
 {
 	ssize_t resEndPack = -1;
-	for (; this->endPack < this->rcvHead; ++(this->endPack))
+	if (this->expectedSize == 0)
 	{
-		if (this->p_rcvBuff[this->endPack] == '\n')
+		for (; this->endPack < this->rcvHead; ++(this->endPack))
 		{
-			resEndPack = (ssize_t)this->endPack + 1;
+			if (this->p_rcvBuff[this->endPack] == '\0')
+			{
+				resEndPack = (ssize_t)this->endPack + 1;
+				this->endPack = 0;
+				break;
+			}
+		}
+	} else
+	{
+		if (this->rcvHead >= this->expectedSize)
+		{
+			resEndPack = (ssize_t)this->expectedSize;
 			this->endPack = 0;
-			break;
 		}
 	}
 	return resEndPack;
