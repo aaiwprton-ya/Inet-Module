@@ -19,7 +19,7 @@ socket.o: socket.cpp socket.h | std_afx.h
 session.o: session.cpp session.h | socket.o processor.o std_afx.h
 	g++ $(CLIBFLAGS) $(CFLAGS) -o $@ $< socket.o processor.o
 
-processor.o: processor.cpp processor.h | std_afx.h
+processor.o: processor.cpp processor.h | inetutils.o std_afx.h
 	g++ $(CLIBFLAGS) $(CFLAGS) -o $@ $<
 
 inetutils.o: inetutils.cpp inetutils.h | std_afx.h

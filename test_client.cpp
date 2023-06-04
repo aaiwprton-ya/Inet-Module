@@ -1,7 +1,12 @@
 #include "client.h"
 #include "include/argparser.h"
 
-void stop(){}
+// client side protocol algorithm
+// 0. accept server hello
+// 1. send request
+// 2. get expected data size, confirm readiness to receive
+// 4. accept data
+// 5. process data, next iteration or closing
 
 int main(int argc, char** argv)
 {
@@ -14,108 +19,46 @@ int main(int argc, char** argv)
 
 	Client client;
 	
-	// отправить команду
-	// принять запрос на отправку данных указанного размера, выделить буффер
-	// отправить подтверждение
-	// принять данные
-	// завершить работу
+	// choose the requested data: uint8_t arr1 or uint32_t arr2  
+	typedef uint32_t RequestType;
+	std::string dataName = "arr2";
 	
-	const char* cmdBAD = "give --state BAD";
-	const char* cmdGet = "get --value arr1";
-	const char* cmdOK = "give --state OK";
-	typedef uint8_t RequestType;
+	Processor::UnitTemplateType startUnitTemplate;
+	startUnitTemplate.unitTemplate = Processor::UT_STATE_TO_GET;
+	startUnitTemplate.nextUnit = "accept";
+	startUnitTemplate.backUnit = "start";
+	startUnitTemplate.errorUnit = "error";
+	startUnitTemplate.getValue = dataName;
+	client.processor.makeUnit("start", startUnitTemplate);
 	
-	client.processor.addUnit("start", [cmdGet](UnitBridge& bridge) -> std::string {
-			std::cout << "unit start" << std::endl;
-			stop();
-			std::string str = InetUtils::requestToStr(bridge.request, bridge.requestSize);
-			std::cout << str << std::endl;
-			
-			Argparser cmdPars(str);
-			std::string* p_state = nullptr;
-			if (cmdPars.findArg(ArgType::ARGTYPE_STRING, "state", "s"))
-			{
-				p_state = cmdPars.getArg("state", &p_state);
-			}
-			
-			*(bridge.plannedData) = nullptr;
-			*(bridge.plannedSize) = 0;
-			*(bridge.expectedSize) = 0;
-			if (p_state == nullptr)
-			{
-				return "error";
-			} else
-			{
-				if ((*p_state).compare("BAD") == 0)
-				{
-					return "start";
-				} else
-				if ((*p_state).compare("OK") == 0)
-				{
-					bridge.response = cmdGet;
-					bridge.responseSize = InetUtils::cmdSize(cmdGet);
-					return "accept";
-				} else
-				{
-					return "error";
-				}
-			}
-		});
+	Processor::UnitTemplateType acceptUnitTemplate;
+	acceptUnitTemplate.unitTemplate = Processor::UT_ACCEPT_TO_READY;
+	acceptUnitTemplate.nextUnit = "receive";
+	acceptUnitTemplate.errorUnit = "error";
+	client.processor.makeUnit("accept", acceptUnitTemplate);
 	
-	client.processor.addUnit("accept", [&cmdOK](UnitBridge& bridge) -> std::string {
-			std::cout << "unit accept" << std::endl;
-			
-			std::string str = InetUtils::requestToStr(bridge.request, bridge.requestSize);
-			std::cout << str << std::endl;
-			
-			Argparser cmdPars(str);
-			cmdPars.findArg(ArgType::ARGTYPE_INT, "size", "sz");
-			
-			int* p_size = cmdPars.getArg("size", &p_size);
-			
-			if (p_size == nullptr)
-			{
-				*(bridge.expectedSize) = 0;
-				return "error";
-			}
-			bridge.response = cmdOK;
-			bridge.responseSize = InetUtils::cmdSize(cmdOK);
-			*(bridge.plannedData) = nullptr;
-			*(bridge.plannedSize) = 0;
-			*(bridge.expectedSize) = *p_size;
-			return "receive";
-		});
+	Processor::UnitTemplateType receiveUnitTemplate;
+	receiveUnitTemplate.unitTemplate = Processor::UT_RECEIVE;
+	receiveUnitTemplate.nextUnit = "exit";
+	receiveUnitTemplate.errorUnit = "error";
+	Processor::RecvBufferType<RequestType> recvBuffer;
+	receiveUnitTemplate.recvBuffer = &recvBuffer;
+	client.processor.makeUnit("receive", receiveUnitTemplate);
 	
-	client.processor.addUnit("receive", [](UnitBridge& bridge) -> std::string {
-			std::cout << "unit receive" << std::endl;
-			RequestType* buf = new RequestType[bridge.requestSize / sizeof(RequestType)];
-			memcpy((void*)buf, bridge.request, bridge.requestSize);
-			for (int i = 0; i < bridge.requestSize / sizeof(RequestType); ++i)
-			{
-				std::cout << (int)buf[i] << " ";
-			}
-			std::cout << std::endl;
-			delete buf;
-			return "exit";
-		});
-	
-	client.processor.addUnit("error", [cmdBAD](UnitBridge& bridge) -> std::string {
-			std::cout << "unit error" << std::endl;
-			bridge.response = cmdBAD;
-			bridge.responseSize = InetUtils::cmdSize(cmdBAD);
-			*(bridge.plannedData) = nullptr;
-			*(bridge.plannedSize) = 0;
-			*(bridge.expectedSize) = 0;
-			return "start";
-		});
+	Processor::UnitTemplateType errorUnitTemplate;
+	errorUnitTemplate.unitTemplate = Processor::UT_ERROR;
+	errorUnitTemplate.backUnit = "start";
+	client.processor.makeUnit("error", errorUnitTemplate);
 	
 	client.processor.setStartState("start");
 	client.processor.setExitState("exit");
 	client.processor.setErrorState("error");
 	client.processor.setupStartState();
 	
-	int connection;
+	// if the client is the initiator 
 	//client.setStartCmd("get --value arr1");
+	
+	int connection;
 	if ((connection = client.connect(*p_addr, *p_port, AF_INET)) == -1)
 	{
 		return -1;
@@ -123,5 +66,13 @@ int main(int argc, char** argv)
 	
 	short events = POLLIN;
 	while ((events = client.step(events)) != 0);
+	
+	// test print
+	for (int i = 0; i < recvBuffer.getSize() / sizeof(RequestType); ++i)
+	{
+		std::cout << (int)((RequestType*)recvBuffer.getBuffer())[i] << " ";
+	}
+	std::cout << std::endl;
+	
 	return 0;
 }

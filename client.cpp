@@ -1,6 +1,7 @@
 #include "client.h"
 
 Client::Client()
+	: processor(&utils)
 {}
 
 Client::~Client()
@@ -13,9 +14,9 @@ int Client::connect(const std::string& addr, int port, int faml, int type) noexc
 	try
 	{
 		this->session = new Session(addr, port, faml, type, this->processor);
-		if (this->startCmd != nullptr)
+		if (this->startCmd.size() > 0)
 		{
-			this->session->pushSendBuffer(this->startCmd, InetUtils::cmdSize(this->startCmd), 0);
+			this->session->pushSendBuffer(this->startCmd.c_str(), InetUtils::cmdSize(this->startCmd.c_str()), 0);
 			do {} while (session->step(POLLOUT) != POLLIN);
 		}
 		return this->session->desc();
@@ -58,5 +59,10 @@ void Client::pushSendBuffer(const void* data, size_t size) noexcept
 void Client::setStartCmd(const char* startCmd)
 {
 	this->startCmd = startCmd;
+}
+
+void Client::setStartCmd(const InetUtils::ResponseTemplateType& cmdTemplate)
+{
+	this->startCmd = this->utils.makeCmd(cmdTemplate);
 }
 

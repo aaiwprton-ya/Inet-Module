@@ -11,10 +11,10 @@ class Client
 {
 private:
 	Session* session = nullptr;
-	const char* startCmd = nullptr;
+	std::string startCmd;
 public:
-	Processor processor;
 	InetUtils utils;
+	Processor processor;
 public:
 	Client();
 	~Client();
@@ -24,6 +24,7 @@ public:
 	short step(short events) noexcept;
 	void pushSendBuffer(const void* data, size_t size) noexcept;
     void setStartCmd(const char* startCmd);
+    void setStartCmd(const InetUtils::ResponseTemplateType& cmdTemplate);
 };
 
 #endif // INET_CLIENT_H

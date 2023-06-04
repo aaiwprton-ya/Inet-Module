@@ -13,16 +13,17 @@ private:
 	std::vector<struct pollfd> v_fds;
     std::list<Session*> sessions;
     std::list<Session*>::iterator iter;
-    const char* startCmd = nullptr;
+    std::string startCmd;
 public:
-	Processor processor;
 	InetUtils utils;
+	Processor processor;
 public:
     Server(const std::string& addr, int port, int faml, int type = SOCK_STREAM);
     ~Server();
 public:
     int start();
     void setStartCmd(const char* startCmd);
+    void setStartCmd(const InetUtils::ResponseTemplateType& cmdTemplate);
 };
 
 #endif // INET_SERVER_H

@@ -6,7 +6,7 @@ static void throwErrno(const std::string& msg)
 }
 
 Server::Server(const std::string& addr, int port, int faml, int type)
-	: socket(addr, port, faml, type)
+	: socket(addr, port, faml, type), processor(&utils)
 {
 	this->socket.bind();
 	int optval = 1;
@@ -63,10 +63,10 @@ int Server::start()
 				Session* session = new Session(fd, this->processor);
 				this->sessions.push_back(session);
 				this->v_fds.push_back(this->v_fds[lastIndex]);
-				if (this->startCmd != nullptr)
+				if (this->startCmd.size() > 0)
 				{
 					this->v_fds[lastIndex] = {fd, POLLOUT, 0};
-					session->pushSendBuffer(this->startCmd, InetUtils::cmdSize(this->startCmd), 0);
+					session->pushSendBuffer(this->startCmd.c_str(), InetUtils::cmdSize(this->startCmd.c_str()), 0);
 					do {} while (session->step(POLLOUT) != POLLIN);
 				}
 				this->v_fds[lastIndex] = {fd, POLLIN, 0};
@@ -118,5 +118,10 @@ int Server::start()
 void Server::setStartCmd(const char* startCmd)
 {
 	this->startCmd = startCmd;
+}
+
+void Server::setStartCmd(const InetUtils::ResponseTemplateType& cmdTemplate)
+{
+	this->startCmd = utils.makeCmd(cmdTemplate);
 }
 

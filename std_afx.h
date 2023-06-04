@@ -25,4 +25,6 @@
 #include <signal.h>
 #include <poll.h>
 
+#include "include/argparser.h"
+
 #endif // STD_AFX_H
