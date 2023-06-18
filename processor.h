@@ -17,10 +17,33 @@ struct UnitBridge
 	
 typedef std::function<std::string(UnitBridge& bridge)> UnitType;
 
+typedef std::pair<void*, size_t> RecvPoolStaticEntityType;
+#define RecvPoolStaticEntity(elementA, elementB) std::pair<void*, size_t>((elementA), (elementB))
+
+typedef void* RecvPoolMutableEntityType; // static_cast<std::vector<uint8_t>*>(void*);
+#define RecvPoolMutableEntityCast(poolEntity) static_cast<std::vector<uint8_t>*>(poolEntity)
+
+typedef std::function<RecvPoolMutableEntityType(RecvPoolMutableEntityType targetBuffer, const void* anySources, size_t sourcesSize)> DataGeneratorType;
+typedef std::pair<RecvPoolMutableEntityType, DataGeneratorType> RecvPoolGenerativeEntityType;
+#define RecvPoolGenerativeEntity(elementA, elementB) std::pair<RecvPoolMutableEntityType, DataGeneratorType>((elementA), (elementB))
+
+typedef std::map<std::string, RecvPoolStaticEntityType> RecvPoolStaticType;
+typedef std::map<std::string, RecvPoolMutableEntityType> RecvPoolMutableType;
+typedef std::map<std::string, RecvPoolGenerativeEntityType> RecvPoolGenerativeType;
+
 class Processor
 {
 public:
-	enum UnitTemplate {UT_STATE_TO_GET, UT_GET_TO_PREPARATION, UT_ACCEPT_TO_READY, UT_READY_TO_SEND, UT_RECEIVE, UT_ERROR};
+	enum UnitTemplate {
+		UT_STATE_TO_GET, 
+		UT_GET_TO_AGREEMENT_STATIC, 
+		UT_GET_TO_AGREEMENT_MUTABLE, 
+		UT_GET_TO_AGREEMENT_GENERATIVE, 
+		UT_GET_TO_AGREEMENT_UNIVERSAL, 
+		UT_ACCEPT_TO_READY, 
+		UT_READY_TO_SEND, 
+		UT_RECEIVE, 
+		UT_ERROR};
 	
 	class RecvBufferTypeBase
 	{
@@ -90,7 +113,11 @@ public:
 		std::string errorUnit;
 		std::string getValue;
 		RecvBufferTypeBase* recvBuffer = nullptr;
-		std::map<std::string, std::pair<void*, size_t>> dataPool;
+		RecvPoolStaticType recvPoolStatic;
+		RecvPoolMutableType recvPoolMutable;
+		RecvPoolGenerativeType recvPoolGenerative;
+		const void* generativeSources;
+		size_t generativeSourcesSize;
 	};
 private:
 	InetUtils* utils;

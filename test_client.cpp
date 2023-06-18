@@ -19,9 +19,9 @@ int main(int argc, char** argv)
 
 	Client client;
 	
-	// choose the requested data: uint8_t arr1 or uint32_t arr2  
+	// choose the requested data: uint8_t arr1 or uint32_t arr2, uint8_t vec1 or uint32_t vec2, uint8_t gen1 or uint32_t gen2
 	typedef uint32_t RequestType;
-	std::string dataName = "arr2";
+	std::string dataName = "gen2";
 	
 	Processor::UnitTemplateType startUnitTemplate;
 	startUnitTemplate.unitTemplate = Processor::UT_STATE_TO_GET;

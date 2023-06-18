@@ -56,7 +56,7 @@ void Processor::makeUnit(const std::string& key, const UnitTemplateType& unitTem
 		
 		
 		break;
-	case UT_GET_TO_PREPARATION:
+	case UT_GET_TO_AGREEMENT_STATIC:
 		
 		
 		result = [this, &unitTemplate](UnitBridge& bridge) -> std::string {
@@ -80,11 +80,159 @@ void Processor::makeUnit(const std::string& key, const UnitTemplateType& unitTem
 				return unitTemplate.errorUnit;
 			} else
 			{
-				std::map<std::string, std::pair<void*, size_t>>::const_iterator dataIter = unitTemplate.dataPool.find(*p_value);
-				if (dataIter != unitTemplate.dataPool.end())
+				RecvPoolStaticType::const_iterator poolEntity = unitTemplate.recvPoolStatic.find(*p_value);
+				if (poolEntity != unitTemplate.recvPoolStatic.end())
 				{
-					*(bridge.plannedData) = (*dataIter).second.first;
-					*(bridge.plannedSize) = (*dataIter).second.second;
+					*(bridge.plannedData) = (*poolEntity).second.first;
+					*(bridge.plannedSize) = (*poolEntity).second.second;
+					*(bridge.expectedSize) = 0;
+				} else
+				{
+					*(bridge.plannedData) = nullptr;
+					*(bridge.plannedSize) = 0;
+					*(bridge.expectedSize) = 0;
+					return unitTemplate.errorUnit;
+				}
+			}
+			this->utils->makeResponse({InetUtils::RT_CMD_ACCEPT_SIZE, std::to_string(*(bridge.plannedSize))}, &(bridge.response), &(bridge.responseSize));
+			return unitTemplate.nextUnit;
+		};
+		
+		
+		break;
+	case UT_GET_TO_AGREEMENT_MUTABLE:
+		
+		
+		result = [this, &unitTemplate](UnitBridge& bridge) -> std::string {
+			std::cout << "unit start" << std::endl;
+			
+			std::string request = InetUtils::requestToStr(bridge.request, bridge.requestSize);
+			std::cout << request << std::endl;
+			
+			Argparser cmdPars(request);
+			std::string* p_value = nullptr;
+			if (cmdPars.findArg(ArgType::ARGTYPE_STRING, "value", "v"))
+			{
+				p_value = cmdPars.getArg("value", &p_value);
+			}
+			
+			if (p_value == nullptr)
+			{
+				*(bridge.plannedData) = nullptr;
+				*(bridge.plannedSize) = 0;
+				*(bridge.expectedSize) = 0;
+				return unitTemplate.errorUnit;
+			} else
+			{
+				RecvPoolMutableType::const_iterator poolEntity = unitTemplate.recvPoolMutable.find(*p_value);
+				if (poolEntity != unitTemplate.recvPoolMutable.end())
+				{
+					*(bridge.plannedData) = RecvPoolMutableEntityCast((*poolEntity).second)->data();
+					*(bridge.plannedSize) = RecvPoolMutableEntityCast((*poolEntity).second)->size();
+					*(bridge.expectedSize) = 0;
+				} else
+				{
+					*(bridge.plannedData) = nullptr;
+					*(bridge.plannedSize) = 0;
+					*(bridge.expectedSize) = 0;
+					return unitTemplate.errorUnit;
+				}
+			}
+			this->utils->makeResponse({InetUtils::RT_CMD_ACCEPT_SIZE, std::to_string(*(bridge.plannedSize))}, &(bridge.response), &(bridge.responseSize));
+			return unitTemplate.nextUnit;
+		};
+		
+		
+		break;
+	case UT_GET_TO_AGREEMENT_GENERATIVE:
+		
+		
+		result = [this, &unitTemplate](UnitBridge& bridge) -> std::string {
+			std::cout << "unit start" << std::endl;
+			
+			std::string request = InetUtils::requestToStr(bridge.request, bridge.requestSize);
+			std::cout << request << std::endl;
+			
+			Argparser cmdPars(request);
+			std::string* p_value = nullptr;
+			if (cmdPars.findArg(ArgType::ARGTYPE_STRING, "value", "v"))
+			{
+				p_value = cmdPars.getArg("value", &p_value);
+			}
+			
+			if (p_value == nullptr)
+			{
+				*(bridge.plannedData) = nullptr;
+				*(bridge.plannedSize) = 0;
+				*(bridge.expectedSize) = 0;
+				return unitTemplate.errorUnit;
+			} else
+			{
+				RecvPoolGenerativeType::const_iterator poolEntity = unitTemplate.recvPoolGenerative.find(*p_value);
+				if (poolEntity != unitTemplate.recvPoolGenerative.end())
+				{
+					(*poolEntity).second.second((*poolEntity).second.first, unitTemplate.generativeSources, unitTemplate.generativeSourcesSize);
+					*(bridge.plannedData) = RecvPoolMutableEntityCast((*poolEntity).second.first)->data();
+					*(bridge.plannedSize) = RecvPoolMutableEntityCast((*poolEntity).second.first)->size();
+					*(bridge.expectedSize) = 0;
+				} else
+				{
+					*(bridge.plannedData) = nullptr;
+					*(bridge.plannedSize) = 0;
+					*(bridge.expectedSize) = 0;
+					return unitTemplate.errorUnit;
+				}
+			}
+			this->utils->makeResponse({InetUtils::RT_CMD_ACCEPT_SIZE, std::to_string(*(bridge.plannedSize))}, &(bridge.response), &(bridge.responseSize));
+			return unitTemplate.nextUnit;
+		};
+		
+		
+		break;
+	case UT_GET_TO_AGREEMENT_UNIVERSAL:
+		
+		
+		result = [this, &unitTemplate](UnitBridge& bridge) -> std::string {
+			std::cout << "unit start" << std::endl;
+			
+			std::string request = InetUtils::requestToStr(bridge.request, bridge.requestSize);
+			std::cout << request << std::endl;
+			
+			Argparser cmdPars(request);
+			std::string* p_value = nullptr;
+			if (cmdPars.findArg(ArgType::ARGTYPE_STRING, "value", "v"))
+			{
+				p_value = cmdPars.getArg("value", &p_value);
+			}
+			
+			if (p_value == nullptr)
+			{
+				*(bridge.plannedData) = nullptr;
+				*(bridge.plannedSize) = 0;
+				*(bridge.expectedSize) = 0;
+				return unitTemplate.errorUnit;
+			} else
+			{
+				RecvPoolStaticType::const_iterator poolStaticEntity = unitTemplate.recvPoolStatic.find(*p_value);
+				RecvPoolMutableType::const_iterator poolMutableEntity = unitTemplate.recvPoolMutable.find(*p_value);
+				RecvPoolGenerativeType::const_iterator poolGenerativeEntity = unitTemplate.recvPoolGenerative.find(*p_value);
+				if (poolStaticEntity != unitTemplate.recvPoolStatic.end())
+				{
+					*(bridge.plannedData) = (*poolStaticEntity).second.first;
+					*(bridge.plannedSize) = (*poolStaticEntity).second.second;
+					*(bridge.expectedSize) = 0;
+				} else
+				if (poolMutableEntity != unitTemplate.recvPoolMutable.end())
+				{
+					*(bridge.plannedData) = RecvPoolMutableEntityCast((*poolMutableEntity).second)->data();
+					*(bridge.plannedSize) = RecvPoolMutableEntityCast((*poolMutableEntity).second)->size();
+					*(bridge.expectedSize) = 0;
+				} else
+				if (poolGenerativeEntity != unitTemplate.recvPoolGenerative.end())
+				{
+					(*poolGenerativeEntity).second.second((*poolGenerativeEntity).second.first, unitTemplate.generativeSources, unitTemplate.generativeSourcesSize);
+					*(bridge.plannedData) = RecvPoolMutableEntityCast((*poolGenerativeEntity).second.first)->data();
+					*(bridge.plannedSize) = RecvPoolMutableEntityCast((*poolGenerativeEntity).second.first)->size();
 					*(bridge.expectedSize) = 0;
 				} else
 				{
